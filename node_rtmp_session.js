@@ -1021,27 +1021,27 @@ class NodeRtmpSession {
       }
     }
 
-    if (context.publishers.has(this.publishStreamPath)) {
-      Logger.log(`[rtmp publish] Already has a stream. id=${this.id} streamPath=${this.publishStreamPath} streamId=${this.publishStreamId}`);
-      this.sendStatusMessage(this.publishStreamId, "error", "NetStream.Publish.BadName", "Stream already publishing");
-    } else if (this.isPublishing) {
-      Logger.log(`[rtmp publish] NetConnection is publishing. id=${this.id} streamPath=${this.publishStreamPath} streamId=${this.publishStreamId}`);
-      this.sendStatusMessage(this.publishStreamId, "error", "NetStream.Publish.BadConnection", "Connection already publishing");
-    } else {
-      Logger.log(`[rtmp publish] New stream. id=${this.id} streamPath=${this.publishStreamPath} streamId=${this.publishStreamId}`);
-      context.publishers.set(this.publishStreamPath, this.id);
-      this.isPublishing = true;
+    // if (context.publishers.has(this.publishStreamPath)) {
+    //   Logger.log(`[rtmp publish] Already has a stream. id=${this.id} streamPath=${this.publishStreamPath} streamId=${this.publishStreamId}`);
+    //   this.sendStatusMessage(this.publishStreamId, "error", "NetStream.Publish.BadName", "Stream already publishing");
+    // } else if (this.isPublishing) {
+    //   Logger.log(`[rtmp publish] NetConnection is publishing. id=${this.id} streamPath=${this.publishStreamPath} streamId=${this.publishStreamId}`);
+    //   this.sendStatusMessage(this.publishStreamId, "error", "NetStream.Publish.BadConnection", "Connection already publishing");
+    // } else {
+    Logger.log(`[rtmp publish] New stream. id=${this.id} streamPath=${this.publishStreamPath} streamId=${this.publishStreamId}`);
+    context.publishers.set(this.publishStreamPath, this.id);
+    this.isPublishing = true;
 
-      this.sendStatusMessage(this.publishStreamId, "status", "NetStream.Publish.Start", `${this.publishStreamPath} is now published.`);
-      for (let idlePlayerId of context.idlePlayers) {
-        let idlePlayer = context.sessions.get(idlePlayerId);
-        if (idlePlayer.playStreamPath === this.publishStreamPath) {
-          idlePlayer.onStartPlay();
-          context.idlePlayers.delete(idlePlayerId);
-        }
+    this.sendStatusMessage(this.publishStreamId, "status", "NetStream.Publish.Start", `${this.publishStreamPath} is now published.`);
+    for (let idlePlayerId of context.idlePlayers) {
+      let idlePlayer = context.sessions.get(idlePlayerId);
+      if (idlePlayer.playStreamPath === this.publishStreamPath) {
+        idlePlayer.onStartPlay();
+        context.idlePlayers.delete(idlePlayerId);
       }
-      context.nodeEvent.emit("postPublish", this.id, this.publishStreamPath, this.publishArgs);
     }
+    context.nodeEvent.emit("postPublish", this.id, this.publishStreamPath, this.publishArgs);
+    // }
   }
 
   onPlay(invokeMessage) {
