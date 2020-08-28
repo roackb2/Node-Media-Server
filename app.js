@@ -22,8 +22,8 @@ const config = {
   },
   auth: {
     api: true,
-    api_user: 'admin',
-    api_pass: 'admin',
+    api_user: 'jay',
+    api_pass: 'topologyuavpwd',
     play: false,
     publish: false,
     secret: 'nodemedia2017privatekey'
@@ -75,4 +75,3 @@ nms.on('postPlay', (id, StreamPath, args) => {
 nms.on('donePlay', (id, StreamPath, args) => {
   console.log('[NodeEvent on donePlay]', `id=${id} StreamPath=${StreamPath} args=${JSON.stringify(args)}`);
 });
-
