@@ -12,7 +12,8 @@ const config = {
     port: 8000,
     mediaroot: './media',
     webroot: './www',
-    allow_origin: '*'
+    allow_origin: '*',
+    api: true
   },
   https: {
     port: 8443,
@@ -26,7 +27,7 @@ const config = {
     play: false,
     publish: false,
     secret: 'nodemedia2017privatekey'
-  },
+  }
 };
 
 
