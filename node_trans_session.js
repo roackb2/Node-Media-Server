@@ -92,7 +92,7 @@ class NodeTransSession extends EventEmitter {
     Logger.log(`ffmpeg args: ${argv.join(' ')}`)
     this.ffmpeg_exec = spawn(this.conf.ffmpeg, argv);
     if (this.conf.detect) {
-        this.detect_exec = spawn('node', ['./lib/face-detection', src], { stdio: ['pipe','pipe','pipe','pipe'] })
+        this.detect_exec = spawn('node', [`${__dirname}/lib/face-detection`, src], { stdio: ['pipe','pipe','pipe','pipe'] })
         let pipe = this.detect_exec.stdio[3];
         pipe.on('data', data => {
             this.ffmpeg_exec.stdin.write(data)
