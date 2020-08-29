@@ -27,7 +27,18 @@ const config = {
     play: false,
     publish: false,
     secret: 'nodemedia2017privatekey'
-  }
+  },
+  trans: {
+      ffmpeg: '/usr/local/bin/ffmpeg',
+      tasks: [
+        {
+          app: 'live',
+          rtmp: true,
+          rtmpApp: 'face-detection',
+          detect: true
+        }
+      ]
+    }
 };
 
 

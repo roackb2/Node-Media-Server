@@ -23,19 +23,27 @@ class NodeTransSession extends EventEmitter {
     let inPath = 'rtmp://127.0.0.1:' + this.conf.rtmpPort + this.conf.streamPath;
     let ouPath = `${this.conf.mediaroot}/${this.conf.streamApp}/${this.conf.streamName}`;
     let mapStr = '';
+    let src = inPath;
 
+    if (this.conf.detect) {
+      inPath = '-'
+    }
     if (this.conf.rtmp && this.conf.rtmpApp) {
       if (this.conf.rtmpApp === this.conf.streamApp) {
         Logger.error('[Transmuxing RTMP] Cannot output to the same app.');
       } else {
         let rtmpOutput = `rtmp://127.0.0.1:${this.conf.rtmpPort}/${this.conf.rtmpApp}/${this.conf.streamName}`;
-        mapStr += `[f=flv]${rtmpOutput}|`;
+        if (this.conf.detect) {
+            mapStr += `${rtmpOutput}`
+        } else {
+            mapStr += `[f=flv]${rtmpOutput}|`;
+        }
         Logger.log('[Transmuxing RTMP] ' + this.conf.streamPath + ' to ' + rtmpOutput);
       }
     }
     if (this.conf.mp4) {
       this.conf.mp4Flags = this.conf.mp4Flags ? this.conf.mp4Flags : '';
-      let mp4FileName = dateFormat('yyyy-mm-dd-HH-MM-ss') + '.mp4';
+      let mp4FileName = dateFormat('yyyy-mm-dd-HH-MM') + '.mp4';
       let mapMp4 = `${this.conf.mp4Flags}${ouPath}/${mp4FileName}|`;
       mapStr += mapMp4;
       Logger.log('[Transmuxing MP4] ' + this.conf.streamPath + ' to ' + ouPath + '/' + mp4FileName);
@@ -55,17 +63,45 @@ class NodeTransSession extends EventEmitter {
       Logger.log('[Transmuxing DASH] ' + this.conf.streamPath + ' to ' + ouPath + '/' + dashFileName);
     }
     mkdirp.sync(ouPath);
-    let argv = ['-y', '-i', inPath];
-    Array.prototype.push.apply(argv, ['-c:v', vc]);
-    Array.prototype.push.apply(argv, this.conf.vcParam);
-    Array.prototype.push.apply(argv, ['-c:a', ac]);
-    Array.prototype.push.apply(argv, this.conf.acParam);
-    Array.prototype.push.apply(argv, ['-f', 'tee', '-map', '0:a?', '-map', '0:v?', mapStr]);
-    argv = argv.filter((n) => { return n }); //去空
+    let argv;
+    if (this.conf.detect) {
+        argv = ['-y',
+        '-f', 'rawvideo',
+        '-vcodec','rawvideo',
+        '-s', '640x480',
+        '-pix_fmt', 'bgr24',
+        '-r', '30',
+        '-i', '-',
+        '-an',
+        '-vcodec', 'libx264',
+        '-c:a', 'aac',
+        '-preset', 'ultrafast',
+        '-tune', 'zerolatency',
+        '-f', 'flv',
+        mapStr ]
+    } else {
+        argv = ['-y', '-fflags', 'nobuffer', '-i', inPath]
+        Array.prototype.push.apply(argv, ['-c:v', vc]);
+        Array.prototype.push.apply(argv, this.conf.vcParam);
+        Array.prototype.push.apply(argv, ['-c:a', ac]);
+        Array.prototype.push.apply(argv, this.conf.acParam);
+        Array.prototype.push.apply(argv, ['-f', 'tee']);
+        Array.prototype.push.apply(argv, ['-map', '0:a?', '-map', '0:v?', mapStr]);
+        argv = argv.filter((n) => { return n }); //去空
+    }
+    Logger.log(`ffmpeg args: ${argv.join(' ')}`)
     this.ffmpeg_exec = spawn(this.conf.ffmpeg, argv);
-    this.ffmpeg_exec.on('error', (e) => {
-      Logger.ffdebug(e);
-    });
+    if (this.conf.detect) {
+        this.detect_exec = spawn('node', ['./lib/face-detection', src], { stdio: ['pipe','pipe','pipe','pipe'] })
+        let pipe = this.detect_exec.stdio[3];
+        pipe.on('data', data => {
+            this.ffmpeg_exec.stdin.write(data)
+        })
+        // this.detect_exec.stdio[1].pipe(process.stdout);
+        // this.detect_exec.stdio[2].pipe(process.stderr);
+        // this.ffmpeg_exec.stdout.pipe(process.stdout)
+        // this.ffmpeg_exec.stderr.pipe(process.stderr)
+    }
 
     this.ffmpeg_exec.stdout.on('data', (data) => {
       Logger.ffdebug(`FF输出：${data}`);
@@ -95,7 +131,7 @@ class NodeTransSession extends EventEmitter {
   }
 
   end() {
-    this.ffmpeg_exec.kill();
+    // this.ffmpeg_exec.kill();
   }
 }
 
