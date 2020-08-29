@@ -78,6 +78,7 @@ class NodeTransSession extends EventEmitter {
         '-preset', 'ultrafast',
         '-tune', 'zerolatency',
         '-f', 'flv',
+        '-map', '0:a?', '-map', '0:v?',
         mapStr ]
     } else {
         argv = ['-y', '-fflags', 'nobuffer', '-i', inPath]
@@ -92,13 +93,13 @@ class NodeTransSession extends EventEmitter {
     Logger.log(`ffmpeg args: ${argv.join(' ')}`)
     this.ffmpeg_exec = spawn(this.conf.ffmpeg, argv);
     if (this.conf.detect) {
-        this.detect_exec = spawn('node', [`${__dirname}/lib/face-detection`, src], { stdio: ['pipe','pipe','pipe','pipe'] })
+        this.detect_exec = spawn('node', [`${__dirname}/lib/face-detection`, src])
         let pipe = this.detect_exec.stdio[3];
-        pipe.on('data', data => {
+        this.detect_exec.stdout.on('data', data => {
+            // console.log(data)
             this.ffmpeg_exec.stdin.write(data)
         })
-        // this.detect_exec.stdio[1].pipe(process.stdout);
-        // this.detect_exec.stdio[2].pipe(process.stderr);
+        this.detect_exec.stderr.pipe(process.stderr);
         // this.ffmpeg_exec.stdout.pipe(process.stdout)
         // this.ffmpeg_exec.stderr.pipe(process.stderr)
     }
@@ -113,6 +114,7 @@ class NodeTransSession extends EventEmitter {
 
     this.ffmpeg_exec.on('close', (code) => {
       Logger.log('[Transmuxing end] ' + this.conf.streamPath);
+      this.detect_exec.kill('SIGINT')
       this.emit('end');
       fs.readdir(ouPath, function (err, files) {
         if (!err) {
