@@ -68,7 +68,7 @@ class NodeTransSession extends EventEmitter {
         argv = ['-y',
         '-f', 'rawvideo',
         '-vcodec','rawvideo',
-        '-s', '640x480',
+        '-s', '640x360',
         '-pix_fmt', 'bgr24',
         '-r', '30',
         '-i', '-',
@@ -82,8 +82,13 @@ class NodeTransSession extends EventEmitter {
         mapStr ]
     } else {
         argv = ['-y', '-fflags', 'nobuffer', '-i', inPath]
-        Array.prototype.push.apply(argv, ['-c:v', vc]);
-        Array.prototype.push.apply(argv, this.conf.vcParam);
+        if (this.conf.scale) {
+            Array.prototype.push.apply(argv, ['-vf', `scale=${this.conf.scale}`]);
+            Array.prototype.push.apply(argv, ['-vcodec', 'libx264']);
+        } else {
+            Array.prototype.push.apply(argv, ['-c:v', vc]);
+            Array.prototype.push.apply(argv, this.conf.vcParam);
+        }
         Array.prototype.push.apply(argv, ['-c:a', ac]);
         Array.prototype.push.apply(argv, this.conf.acParam);
         Array.prototype.push.apply(argv, ['-f', 'tee']);
@@ -100,9 +105,9 @@ class NodeTransSession extends EventEmitter {
             this.ffmpeg_exec.stdin.write(data)
         })
         this.detect_exec.stderr.pipe(process.stderr);
-        // this.ffmpeg_exec.stdout.pipe(process.stdout)
-        // this.ffmpeg_exec.stderr.pipe(process.stderr)
     }
+    this.ffmpeg_exec.stdout.pipe(process.stdout)
+    this.ffmpeg_exec.stderr.pipe(process.stderr)
 
     this.ffmpeg_exec.stdout.on('data', (data) => {
       Logger.ffdebug(`FF输出：${data}`);
@@ -114,7 +119,9 @@ class NodeTransSession extends EventEmitter {
 
     this.ffmpeg_exec.on('close', (code) => {
       Logger.log('[Transmuxing end] ' + this.conf.streamPath);
-      this.detect_exec.kill('SIGINT')
+      if (this.conf.detect) {
+          this.detect_exec.kill('SIGINT')
+      }
       this.emit('end');
       fs.readdir(ouPath, function (err, files) {
         if (!err) {
